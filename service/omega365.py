@@ -67,7 +67,7 @@ def crud():
     with session_factory.make_session() as s:
         authenticate(s)
 
-        response = s.request("POST", request_url, json=json.loads(request_data), headers=headers)
+        response = s.request("POST", request_url, json=request_data, headers=headers)
 
         if response.status_code != 200:
             raise Exception(response.reason + ": " + response.text)
