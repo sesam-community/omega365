@@ -61,13 +61,13 @@ def crud():
     request_url = "{0}{1}".format(url, "/api/data")
     logger.info("Request url: %s", request_url)
 
-    request_data = request.data
-    logger.info("Request data: %s", request_data)
+    request_data = json.loads(request.data)
+    logger.info("Request data: %s", request_data[0])
 
     with session_factory.make_session() as s:
         authenticate(s)
 
-        response = s.request("POST", request_url, json=request_data, headers=headers)
+        response = s.request("POST", request_url, json=request_data[0], headers=headers)
 
         if response.status_code != 200:
             raise Exception(response.reason + ": " + response.text)
