@@ -59,10 +59,10 @@ def stream_json(clean):
 @app.route("/create", methods=["POST"])
 def crud():
     request_url = "{0}{1}".format(url, "/api/data")
-
     logger.info("Request url: %s", request_url)
 
     request_data = request.data
+    logger.info("Request data: %s", request_data)
 
     with session_factory.make_session() as s:
         authenticate(s)
@@ -70,7 +70,7 @@ def crud():
         response = s.request("POST", request_url, json=json.loads(request_data), headers=headers)
 
         if response.status_code != 200:
-            raise Exception(response.reason)
+            raise Exception(response.reason + ": " + response.text)
 
         result = json.loads(response.text)
 
