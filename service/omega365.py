@@ -56,6 +56,19 @@ def stream_json(clean):
     yield ']'
 
 
+def remove_ns(keys):
+    if isinstance(keys, list):
+        for key in keys:
+            remove_ns(key)
+    if isinstance(keys, dict):
+        for key in keys.keys():
+            if ":" in key:
+                new_key = key.split(":")[1]
+                keys[new_key] = keys.pop(key)
+        for val in keys.values():
+            remove_ns(val)
+
+
 @app.route("/retrieve", methods=["POST"])
 @app.route("/create", methods=["POST"])
 def crud():
@@ -65,13 +78,9 @@ def crud():
     request_data = json.loads(request.data)
 
     if remove_namespaces:
-        for key in request_data[0]:
-            if ":" in key:
-                new_key = key.split(":")[1]
-                request_data[0][new_key] = request_data[0].pop(key)
+       remove_ns(request_data[0])
 
     logger.info("Request data: %s", request_data[0])
-
     with session_factory.make_session() as s:
         authenticate(s)
 
