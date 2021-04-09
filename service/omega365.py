@@ -11,6 +11,7 @@ logger = logger.Logger('Omega365 client service')
 url = os.environ.get("base_url")
 username = os.environ.get("username")
 pw = os.environ.get("password")
+remove_namespaces = os.environ.get("remove_namespaces", True)
 headers = json.loads('{"Content-Type": "application/json"}')
 
 
@@ -63,6 +64,12 @@ def crud():
 
     request_data = json.loads(request.data)
     logger.info("Request data: %s", request_data[0])
+
+    if remove_namespaces:
+        for key in request_data[0]:
+            if ":" in key:
+                new_key = key.split(":")[1]
+                request_data[0][new_key] = request_data[0].pop(key)
 
     with session_factory.make_session() as s:
         authenticate(s)

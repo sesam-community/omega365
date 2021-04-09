@@ -12,6 +12,8 @@ A rest microservice for connecting to Omega 365.
 
 `password` - password to Omega 365.
 
+`remove_namespaces` - determines if namespaces should be removed from the submitted payload, default value: True.
+
 
 ### Example system config:
 
