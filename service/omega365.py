@@ -63,13 +63,14 @@ def crud():
     logger.info("Request url: %s", request_url)
 
     request_data = json.loads(request.data)
-    logger.info("Request data: %s", request_data[0])
 
     if remove_namespaces:
         for key in request_data[0]:
             if ":" in key:
                 new_key = key.split(":")[1]
                 request_data[0][new_key] = request_data[0].pop(key)
+
+    logger.info("Request data: %s", request_data[0])
 
     with session_factory.make_session() as s:
         authenticate(s)
