@@ -102,29 +102,36 @@ def create():
     request_url = "{0}{1}".format(url, "/api/data")
     logger.info("Request url: %s", request_url)
 
-    debug = request.get_json()
-    logger.info("Debug json: %s", debug)
-    request_data = json.loads(request.data)
+    request_data = request.get_json()
 
     if remove_namespaces:
-        remove_ns(request_data[0])
+        remove_ns(request_data)
 
-    logger.info("Request data: %s", request_data[0])
+    logger.info("Request data: %s", request_data)
 
-    with session_factory.make_session() as s:
-        authenticate(s)
+    def generate(entities):
+        yield "["
+        with session_factory.make_session() as s:
+            authenticate(s)
+            for index, entity in enumerate(entities):
+                if index > 0:
+                    yield ","
 
-        response = s.request("POST", request_url, json=request_data[0], headers=headers)
+                response = s.request("POST", request_url, json=entity, headers=headers)
 
-        if response.status_code != 200:
-            raise Exception(response.reason + ": " + response.text)
+                if response.status_code != 200:
+                    logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
+                    raise Exception(response.reason + ": " + response.text)
 
-        result = json.loads(response.text)
+                result = json.loads(response.text)
 
-    return Response(
-            stream_json(result['success']),
-            mimetype='application/json'
-        )
+                yield json.dumps(result['success'])
+        yield "]"
+
+    response_data_generator = generate(request_data)
+    response_data = response_data_generator
+    return Response(response=response_data, mimetype="application/json")
+
 
 if __name__ == '__main__':
     cherrypy.tree.graft(app, '/')
