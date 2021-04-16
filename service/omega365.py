@@ -70,17 +70,17 @@ def remove_ns(keys):
 
 
 @app.route("/retrieve", methods=["POST"])
-@app.route("/create", methods=["POST"])
-def crud():
+def retrieve():
     request_url = "{0}{1}".format(url, "/api/data")
     logger.info("Request url: %s", request_url)
 
     request_data = json.loads(request.data)
 
     if remove_namespaces:
-       remove_ns(request_data[0])
+        remove_ns(request_data[0])
 
     logger.info("Request data: %s", request_data[0])
+
     with session_factory.make_session() as s:
         authenticate(s)
 
@@ -96,6 +96,35 @@ def crud():
             mimetype='application/json'
         )
 
+
+@app.route("/create", methods=["POST"])
+def create():
+    request_url = "{0}{1}".format(url, "/api/data")
+    logger.info("Request url: %s", request_url)
+
+    debug = request.get_json()
+    logger.info("Debug json: %s", debug)
+    request_data = json.loads(request.data)
+
+    if remove_namespaces:
+        remove_ns(request_data[0])
+
+    logger.info("Request data: %s", request_data[0])
+
+    with session_factory.make_session() as s:
+        authenticate(s)
+
+        response = s.request("POST", request_url, json=request_data[0], headers=headers)
+
+        if response.status_code != 200:
+            raise Exception(response.reason + ": " + response.text)
+
+        result = json.loads(response.text)
+
+    return Response(
+            stream_json(result['success']),
+            mimetype='application/json'
+        )
 
 if __name__ == '__main__':
     cherrypy.tree.graft(app, '/')
