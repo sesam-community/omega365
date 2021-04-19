@@ -133,6 +133,20 @@ def create():
     return Response(response=response_data, mimetype="application/json")
 
 
+@app.route("/delete", methods=["DELETE"])
+def delete():
+    request_url = "{0}{1}".format(url, "/api/data")
+    logger.info("Request url: %s", request_url)
+
+    request_data = request.get_json()
+
+    if remove_namespaces:
+        remove_ns(request_data)
+
+    logger.info("Request data: %s", request_data)
+
+    return None
+
 if __name__ == '__main__':
     cherrypy.tree.graft(app, '/')
 
