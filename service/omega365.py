@@ -104,9 +104,8 @@ def get(path):
     where_clause = None
     if request.args.get('since') is not None and resources[path]["since_property_name"] is not None:
         where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(request.args.get('since'), "%Y-%m-%dT%H:%M:%S.%f"))
-    #2021-04-22T08:52:57.03
 
-    request_data = {
+    get_template = {
         "maxRecords": -1,
         "operation": "retrieve",
         "resourceName": path,
@@ -114,12 +113,12 @@ def get(path):
         "whereClause": where_clause
     }
 
-    logger.info("Request data: %s", request_data)
+    logger.info("Request data: %s", get_template)
 
     with session_factory.make_session() as s:
         authenticate(s)
 
-        response = s.request("POST", request_url, json=request_data, headers=headers)
+        response = s.request("POST", request_url, json=get_template, headers=headers)
 
         if response.status_code != 200:
             raise Exception(response.reason + ": " + response.text)
@@ -159,6 +158,14 @@ def post(path):
         "uniqueName": path
     }
 
+    update_template = {
+        "operation": "update",
+        "resourceName": path,
+        "uniqueName": path,
+        "excludeFieldNames": False,
+        "fields": resources[path]["fields"]
+    }
+
     def generate(entities):
         yield "["
         with session_factory.make_session() as s:
@@ -167,12 +174,14 @@ def post(path):
                 if index > 0:
                     yield ","
 
-                if entity["_deleted"] is True:
-                    post_entity = entity.copy()
+                post_entity = entity.copy()
+                if "_deleted" in entity and entity["_deleted"] is True:
                     post_entity.update(delete_template)
                 else:
-                    post_entity = entity.copy()
-                    post_entity.update(create_template)
+                    if resources[path]["id_property_name"] in entity:
+                        post_entity.update(update_template)
+                    else:
+                        post_entity.update(create_template)
 
                 response = s.request("POST", request_url, json=post_entity, headers=headers)
 

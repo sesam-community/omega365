@@ -16,7 +16,7 @@ A microservice for connecting to Omega 365.
 
 * fields: a list of the properties exposed by the endpoint. Required property.
 * resource_name: name of the Omega 365 resource. Required property.
-* id_property_name: name of the property containing the unique id of an entity. Optional property.
+* id_property_name: name of the property containing the unique id of an entity. Required property.
 * since_property_name: name of the property containing the value for the since marker if the resource supports since functionality for continuation support. Optional property.
 
 ### Example system config:
