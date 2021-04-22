@@ -134,14 +134,14 @@ def get(path):
 @app.route("/<path:path>", methods=["POST"])
 def post(path):
     request_url = "{0}{1}".format(url, "/api/data")
-    logger.info("Post request url: %s", request_url)
+    logger.info("Request url: %s", request_url)
 
     if path not in resources:
         raise Exception("Resource with name '{0}' not found!".format(path))
 
     request_data = request.get_json()
 
-    logger.info("Post request data: %s", request_data)
+    logger.info("Request data: %s", request_data)
 
     create_template = {
         "maxRecords": -1,
@@ -152,6 +152,12 @@ def post(path):
         "fields": resources[path]["fields"]
     }
 
+    delete_template = {
+        "operation": "destroy",
+        "resourceName": path,
+        "uniqueName": path
+    }
+
     def generate(entities):
         yield "["
         with session_factory.make_session() as s:
@@ -160,10 +166,14 @@ def post(path):
                 if index > 0:
                     yield ","
 
-                create_entity = entity.copy()
-                create_entity.update(create_template)
+                if entity["_deleted"] is True:
+                    post_entity = entity.copy()
+                    post_entity.update(delete_template)
+                else:
+                    post_entity = entity.copy()
+                    post_entity.update(create_template)
 
-                response = s.request("POST", request_url, json=create_entity, headers=headers)
+                response = s.request("POST", request_url, json=post_entity, headers=headers)
 
                 if response.status_code != 200:
                     logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
@@ -175,52 +185,6 @@ def post(path):
         yield "]"
 
     response_data_generator = generate(request_data)
-    response_data = response_data_generator
-    return Response(response=response_data, mimetype="application/json")
-
-
-@app.route("/<path:path>", methods=["DELETE"])
-def delete(path):
-    request_url = "{0}{1}".format(url, "/api/data")
-    logger.info("Delete request url: %s", request_url)
-
-    if path not in resources:
-        raise Exception("Resource with name '{0}' not found!".format(path))
-
-    request_data = request.get_json()
-
-    logger.info("Delete request data: %s", request_data)
-
-    delete_template = {
-        "operation": "destroy",
-        "resourceName": path,
-        "uniqueName": path
-    }
-
-    def destroy(entities):
-        yield "["
-        with session_factory.make_session() as s:
-            authenticate(s)
-            for index, entity in enumerate(entities):
-                if index > 0:
-                    yield ","
-
-                delete_entity = entity.copy()
-                delete_entity.update(delete_template)
-
-                #response = s.request("POST", request_url, json=delete_entity, headers=headers)
-
-                #if response.status_code != 200:
-                #    logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
-                #    raise Exception(response.reason + ": " + response.text)
-
-                #result = json.loads(response.text)
-
-                #yield json.dumps(result['success'])
-                yield json.dumps([])
-        yield "]"
-
-    response_data_generator = destroy(request_data)
     response_data = response_data_generator
     return Response(response=response_data, mimetype="application/json")
 
