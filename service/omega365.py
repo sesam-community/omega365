@@ -103,7 +103,8 @@ def get(path):
 
     where_clause = None
     if request.args.get('since') is not None and resources[path]["since_property_name"] is not None:
-        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(request.args.get('since'), "%Y-%m-%dT%H:%M.%S"))
+        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(request.args.get('since'), "%Y-%m-%dT%H:%M:%S.%f"))
+    #2021-04-22T08:52:57.03
 
     request_data = {
         "maxRecords": -1,
