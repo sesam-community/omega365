@@ -1,19 +1,23 @@
 ## Omega 365 client service
 
-A rest microservice for connecting to Omega 365.
+A microservice for connecting to Omega 365.
 
 [![SesamCommunity CI&CD](https://github.com/sesam-community/omega365/actions/workflows/sesam-community-ci-cd.yml/badge.svg)](https://github.com/sesam-community/omega365/actions/workflows/sesam-community-ci-cd.yml)
 
 ### Environment variables:
 
-`base_url` - the base url of Omega 365.
+`base_url` - base url to the Omega 365 instance.
 
-`username` - username to Omega 365.
+`username` - Omega 365 username.
 
-`password` - password to Omega 365.
+`password` - Omega 365.
 
-`remove_namespaces` - determines if namespaces should be removed from the submitted payload, default value: True.
+`resources` - a list of the configured Omega 365 API endpoints, the following properties are declarable for each endpoint:
 
+* fields: a list of the properties exposed by the endpoint. Required property.
+* resource_name: name of the Omega 365 resource. Required property.
+* id_property_name: name of the property containing the unique id of an entity. Optional property.
+* since_property_name: name of the property containing the value for the since marker if the resource supports since functionality for continuation support. Optional property.
 
 ### Example system config:
 
@@ -23,18 +27,44 @@ A rest microservice for connecting to Omega 365.
   "type": "system:microservice",
   "docker": {
     "environment": {
-      "base_url": "https://my.omega365.com",
-      "username": "omega365-username",
-      "password": "$SECRET(omega365-password)",
+      "base_url": "$ENV(omega365-url)",
       "page_number": "1",
       "page_size": "1000",
-      "protocol": "json"
+      "password": "$SECRET(omega365_password)",
+      "protocol": "json",
+      "resources": [{
+        "fields": [{
+          "name": "PrimKey"
+        }, {
+          "name": "Created"
+        }, {
+          "name": "Name"
+        }],
+        "id_property_name": "PrimKey",
+        "resource_name": "omega365-integration-resourcename",
+        "since_property_name": "Updated"
+      }],
+      "username": "$ENV(omega365-username)"
     },
     "image": "sesamcommunity/omega365:1.0",
     "port": 5002
   }
 }
-
 ```
 
+### Example pipe config:
+
+```json
+{
+  "_id": "omega365-pipe",
+  "type": "pipe",
+  "source": {
+    "type": "json",
+    "system": "omega365-system",
+    "completeness": false,
+    "is_since_comparable": true,
+    "supports_since": true,
+    "url": "omega365-integration-resourcename"
+  }
+}
 ```

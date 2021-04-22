@@ -4,6 +4,7 @@ import os
 import logger
 import cherrypy
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 logger = logger.Logger('Omega365 client service')
@@ -13,6 +14,9 @@ username = os.environ.get("username")
 pw = os.environ.get("password")
 remove_namespaces = os.environ.get("remove_namespaces", True)
 headers = json.loads('{"Content-Type": "application/json"}')
+resources_config = json.loads(os.environ.get("resources", '[]'))
+
+resources = {}
 
 
 class BasicUrlSystem:
@@ -44,7 +48,7 @@ def authenticate(s):
         logger.warning("Exception occurred when authenticating the user: '%s'", e)
 
 
-def stream_json(clean):
+def stream_json(clean, since_property_name, id_property_name):
     first = True
     yield '['
     for i, row in enumerate(clean):
@@ -52,6 +56,10 @@ def stream_json(clean):
             yield ','
         else:
             first = False
+        if since_property_name is not None:
+            row["_updated"] = row[since_property_name]
+        if id_property_name is not None:
+            row["_id"] = str(row[id_property_name])
         yield json.dumps(row)
     yield ']'
 
@@ -69,22 +77,49 @@ def remove_ns(keys):
             remove_ns(val)
 
 
-@app.route("/retrieve", methods=["POST"])
-def retrieve():
+def populate_resources():
+    for resource in resources_config:
+        since_property_name = None
+        id_property_name = None
+        if "since_property_name" in resource:
+            since_property_name = resource["since_property_name"]
+        if "id_property_name" in resource:
+            id_property_name = resource["id_property_name"]
+        resources[resource["resource_name"]] = \
+            {
+                "fields": resource["fields"],
+                "since_property_name": since_property_name,
+                "id_property_name": id_property_name
+            }
+
+
+@app.route("/<path:path>", methods=["GET"])
+def get(path):
     request_url = "{0}{1}".format(url, "/api/data")
     logger.info("Request url: %s", request_url)
 
-    request_data = json.loads(request.data)
+    if path not in resources:
+        raise Exception("Resource with name '{0}' not found!".format(path))
 
-    if remove_namespaces:
-        remove_ns(request_data[0])
+    where_clause = None
+    if request.args.get('since') is not None and resources[path]["since_property_name"] is not None:
+        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(request.args.get('since'), "%Y-%m-%dT%H:%M:%S.%f"))
+    #2021-04-22T08:52:57.03
 
-    logger.info("Request data: %s", request_data[0])
+    request_data = {
+        "maxRecords": -1,
+        "operation": "retrieve",
+        "resourceName": path,
+        "fields": resources[path]["fields"],
+        "whereClause": where_clause
+    }
+
+    logger.info("Request data: %s", request_data)
 
     with session_factory.make_session() as s:
         authenticate(s)
 
-        response = s.request("POST", request_url, json=request_data[0], headers=headers)
+        response = s.request("POST", request_url, json=request_data, headers=headers)
 
         if response.status_code != 200:
             raise Exception(response.reason + ": " + response.text)
@@ -92,22 +127,37 @@ def retrieve():
         result = json.loads(response.text)
 
     return Response(
-            stream_json(result['success']),
-            mimetype='application/json'
-        )
+        stream_json(result['success'], resources[path]["since_property_name"], resources[path]["id_property_name"]),
+        mimetype='application/json'
+    )
 
 
-@app.route("/create", methods=["POST"])
-def create():
+@app.route("/<path:path>", methods=["POST"])
+def post(path):
     request_url = "{0}{1}".format(url, "/api/data")
     logger.info("Request url: %s", request_url)
 
+    if path not in resources:
+        raise Exception("Resource with name '{0}' not found!".format(path))
+
     request_data = request.get_json()
 
-    if remove_namespaces:
-        remove_ns(request_data)
-
     logger.info("Request data: %s", request_data)
+
+    create_template = {
+        "maxRecords": -1,
+        "operation": "create",
+        "resourceName": path,
+        "uniqueName": path,
+        "excludeFieldNames": False,
+        "fields": resources[path]["fields"]
+    }
+
+    delete_template = {
+        "operation": "destroy",
+        "resourceName": path,
+        "uniqueName": path
+    }
 
     def generate(entities):
         yield "["
@@ -117,7 +167,14 @@ def create():
                 if index > 0:
                     yield ","
 
-                response = s.request("POST", request_url, json=entity, headers=headers)
+                if entity["_deleted"] is True:
+                    post_entity = entity.copy()
+                    post_entity.update(delete_template)
+                else:
+                    post_entity = entity.copy()
+                    post_entity.update(create_template)
+
+                response = s.request("POST", request_url, json=post_entity, headers=headers)
 
                 if response.status_code != 200:
                     logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
@@ -133,22 +190,10 @@ def create():
     return Response(response=response_data, mimetype="application/json")
 
 
-@app.route("/delete", methods=["DELETE"])
-def delete():
-    request_url = "{0}{1}".format(url, "/api/data")
-    logger.info("Request url: %s", request_url)
-
-    request_data = request.get_json()
-
-    if remove_namespaces:
-        remove_ns(request_data)
-
-    logger.info("Request data: %s", request_data)
-
-    return None
-
 if __name__ == '__main__':
     cherrypy.tree.graft(app, '/')
+
+    populate_resources()
 
     # Set the configuration of the web server to production mode
     cherrypy.config.update({
