@@ -52,7 +52,7 @@ A microservice for connecting to Omega 365.
 }
 ```
 
-### Example pipe config:
+### Example pipe config when used as a source:
 
 ```json
 {
@@ -67,4 +67,23 @@ A microservice for connecting to Omega 365.
     "url": "omega365-integration-resourcename"
   }
 }
+```
+
+### Example pipe config when used as a sink:
+
+```json
+{
+  "_id": "omega365-endpoint",
+  "type": "pipe",
+  "source": {
+    "type": "dataset",
+    "dataset": "omega365-dataset"
+  },
+  "sink": {
+    "type": "json",
+    "system": "omega365-system",
+    "url": "omega365-integration-resourcename"
+  }
+}
+
 ```
