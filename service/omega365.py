@@ -143,10 +143,7 @@ def post(path):
 
     request_data = request.get_json()
 
-    # logger.info("Request data: %s", request_data)
-    logger.info("Request data: %s" % repr(request_data))
-    logger.info("Request content: %s" % request.content)
-    logger.info("Request form: %s" % request.form)
+    logger.info("Request data: %s", request_data)
 
     create_template = {
         "maxRecords": -1,
@@ -181,14 +178,14 @@ def post(path):
 
                 post_entity = entity.copy()
                 if "_deleted" in entity and entity["_deleted"] is True:
-                    logger.info("Deleting entity: {0}!".format(entity["_id"]))
+                    #logger.info("Deleting entity: {0}!".format(entity["_id"]))
                     post_entity.update(delete_template)
                 else:
                     if resources[path]["id_property_name"] in entity:
-                        logger.info("Updating entity: {0}!".format(entity["_id"]))
+                        #logger.info("Updating entity: {0}!".format(entity["_id"]))
                         post_entity.update(update_template)
                     else:
-                        logger.info("Creating entity: {0}!".format(entity["_id"]))
+                        #logger.info("Creating entity: {0}!".format(entity["_id"]))
                         post_entity.update(create_template)
 
                 response = s.request("POST", request_url, json=post_entity, headers=headers)
