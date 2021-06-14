@@ -141,7 +141,7 @@ def post(path):
     if path not in resources:
         raise Exception("Resource with name '{0}' not found!".format(path))
 
-    request_data = json.dumps(request.data)
+    request_data = json.loads(request.data)
 
     logger.info("Request data: %s", request_data)
 
