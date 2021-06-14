@@ -140,7 +140,7 @@ def post(path):
 
     if path not in resources:
         raise Exception("Resource with name '{0}' not found!".format(path))
-
+ 
     request_data = request.get_json()
 
     logger.info("Request data: %s", request_data)
