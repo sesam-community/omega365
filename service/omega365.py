@@ -141,7 +141,7 @@ def post(path):
     if path not in resources:
         raise Exception("Resource with name '{0}' not found!".format(path))
 
-    request_data = request.get_json(force=True)
+    request_data = request.get_json()
 
     logger.info("Request data: %s", request_data)
 
@@ -168,39 +168,7 @@ def post(path):
         "fields": resources[path]["fields"]
     }
 
-    def generate(entities):
-        yield "["
-        with session_factory.make_session() as s:
-            authenticate(s)
-            for index, entity in enumerate(entities):
-                if index > 0:
-                    yield ","
-
-                post_entity = entity.copy()
-                if "_deleted" in entity and entity["_deleted"] is True:
-                    #logger.info("Deleting entity: {0}!".format(entity["_id"]))
-                    post_entity.update(delete_template)
-                else:
-                    if resources[path]["id_property_name"] in entity:
-                        #logger.info("Updating entity: {0}!".format(entity["_id"]))
-                        post_entity.update(update_template)
-                    else:
-                        #logger.info("Creating entity: {0}!".format(entity["_id"]))
-                        post_entity.update(create_template)
-
-                response = s.request("POST", request_url, json=post_entity, headers=headers)
-
-                if response.status_code != 200:
-                    logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
-                    raise Exception(response.reason + ": " + response.text)
-
-                result = json.loads(response.text)
-
-                yield json.dumps(result['success'])
-        yield "]"
-
-    response_data_generator = generate(request_data)
-    response_data = response_data_generator
+    response_data = []
     return Response(response=response_data, mimetype="application/json")
 
 
