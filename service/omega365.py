@@ -144,6 +144,9 @@ def post(path):
     request_data = request.get_json()
 
     logger.info("Request data: %s", request_data)
+    logger.info("Request form: %s", request.form)
+    logger.info("Request the data: %s", request.data)
+    logger.info("Request values: %s", request.values)
 
     create_template = {
         "maxRecords": -1,
