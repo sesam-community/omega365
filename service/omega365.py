@@ -105,7 +105,12 @@ def get(path):
     if request.args.get('since') is not None and resources[path]["since_property_name"] is not None:
         logger.info("Since marker found: {0}".format(request.args.get('since')))
         since = request.args.get('since').split(".")[0]
-        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(since, "%Y-%m-%dT%H:%M:%S"))
+
+        # make sure the timestamp is always post-fixed with "Z"
+        if "Z" not in since:
+            since += "Z"
+
+        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(since, "%Y-%m-%dT%H:%M:%SZ"))
 
     get_template = {
         "maxRecords": -1,
