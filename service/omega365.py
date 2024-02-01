@@ -8,12 +8,13 @@ from datetime import datetime
 
 app = Flask(__name__)
 logger = logger.Logger('Omega365 client service')
+logger.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())
 
 url = os.environ.get("base_url")
 username = os.environ.get("username")
 pw = os.environ.get("password")
 remove_namespaces = os.environ.get("remove_namespaces", True)
-headers = json.loads('{"Content-Type": "application/json"}')
+headers = json.loads('{"Content-Type": "application/json", "Accept": "application/json"}')
 resources_config = json.loads(os.environ.get("resources", '[]'))
 
 resources = {}
@@ -110,7 +111,9 @@ def get(path):
         if "Z" not in since:
             since += "Z"
 
-        where_clause = "{0} >= '{1}'".format(resources[path]["since_property_name"], datetime.strptime(since, "%Y-%m-%dT%H:%M:%SZ"))
+        where_clause = "{0} >= '{1}'".format(
+            resources[path]["since_property_name"], datetime.strptime(since, "%Y-%m-%dT%H:%M:%SZ")
+        )
 
     get_template = {
         "maxRecords": -1,
@@ -126,9 +129,11 @@ def get(path):
         authenticate(s)
 
         response = s.request("POST", request_url, json=get_template, headers=headers)
+        logger.debug(f"request headers : {headers}")
+        logger.debug(f"response headers: {response.headers}")
 
         if response.status_code != 200:
-            raise Exception(response.reason + ": " + response.text)
+            raise Exception(f"{response.status_code} - {response.reason}: {response.text}")
 
         result = json.loads(response.text)
 
@@ -194,19 +199,18 @@ def post(path):
                         post_entity.update(create_template)
 
                 response = s.request("POST", request_url, json=post_entity, headers=headers)
+                logger.debug(f"request headers : {headers}")
+                logger.debug(f"response headers: {response.headers}")
 
                 if response.status_code != 200:
-                    logger.warning("An error occurred: {0}. {1}".format(response.reason, response.text))
-                    raise Exception(response.reason + ": " + response.text)
+                    raise Exception(f"{response.status_code} - {response.reason}: {response.text}")
 
                 result = json.loads(response.text)
 
                 yield json.dumps(result['success'])
         yield "]"
 
-    response_data_generator = generate(request_data)
-    response_data = response_data_generator
-    return Response(response=response_data, mimetype="application/json")
+    return Response(response=generate(request_data), mimetype="application/json")
 
 
 if __name__ == '__main__':

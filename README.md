@@ -14,6 +14,8 @@ A microservice for connecting to Omega 365.
 
 `resources` - a list of the configured Omega 365 API endpoints, the following properties are declarable for each endpoint:
 
+`LOG_LEVEL` - Defaults to "INFO".
+
 * fields: a list of the properties exposed by the endpoint. Required property.
 * resource_name: name of the Omega 365 resource. Required property.
 * id_property_name: name of the property containing the unique id of an entity. Required property.
@@ -28,6 +30,7 @@ A microservice for connecting to Omega 365.
   "docker": {
     "environment": {
       "base_url": "$ENV(omega365-url)",
+      "LOG_LEVEL": "DEBUG",
       "page_number": "1",
       "page_size": "1000",
       "password": "$SECRET(omega365_password)",
