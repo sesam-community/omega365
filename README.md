@@ -30,7 +30,7 @@ As of v1.7 only ApiKey authentication is supported in this microservice.
   "type": "system:microservice",
   "docker": {
     "environment": {
-      "API_KEY": "$SECRET(omega365-apikey",
+      "API_KEY": "$SECRET(omega365-apikey)",
       "base_url": "$ENV(omega365-url)",
       "LOG_LEVEL": "DEBUG",
       "page_number": "1",
