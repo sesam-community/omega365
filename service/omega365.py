@@ -11,14 +11,12 @@ logger = logger.Logger('Omega365 client service')
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())
 
 url = os.environ.get("base_url")
-username = os.environ.get("username")
-pw = os.environ.get("password")
 remove_namespaces = os.environ.get("remove_namespaces", True)
 headers = json.loads('{"Content-Type": "application/json", "Accept": "application/json"}')
+headers["ApiKey"] = os.environ.get("API_KEY")
 resources_config = json.loads(os.environ.get("resources", '[]'))
 
 resources = {}
-
 
 class BasicUrlSystem:
     def __init__(self, config):
@@ -30,23 +28,7 @@ class BasicUrlSystem:
         session.verify = True
         return session
 
-
 session_factory = BasicUrlSystem({"headers": headers})
-
-
-def authenticate(s):
-    auth_url = url + "/login?mobile_login=true"
-
-    auth_content = {
-        "username_user": username,
-        "password": pw,
-        "remember": "false"
-    }
-
-    try:
-        auth_resp = s.request("POST", auth_url, json=auth_content)
-    except Exception as e:
-        logger.warning("Exception occurred when authenticating the user: '%s'", e)
 
 
 def stream_json(clean, since_property_name, id_property_name):
@@ -86,7 +68,7 @@ def populate_resources():
             since_property_name = resource["since_property_name"]
         if "id_property_name" in resource:
             id_property_name = resource["id_property_name"]
-        resources[resource["resource_name"]] = \
+        resources[resource["viewName"]] = \
             {
                 "fields": resource["fields"],
                 "since_property_name": since_property_name,
@@ -126,8 +108,6 @@ def get(path):
     logger.info("Request data: %s", get_template)
 
     with session_factory.make_session() as s:
-        authenticate(s)
-
         response = s.request("POST", request_url, json=get_template, headers=headers)
         logger.debug(f"request headers : {headers}")
         logger.debug(f"response headers: {response.headers}")
@@ -181,7 +161,6 @@ def post(path):
     def generate(entities):
         yield "["
         with session_factory.make_session() as s:
-            authenticate(s)
             for index, entity in enumerate(entities):
                 if index > 0:
                     yield ","
